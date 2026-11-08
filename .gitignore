@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+
+# Секреты и локальные данные
+.env
+*.db
+*.log
+data/*.csv
+data/*.db
+
+# Но примеры данных для бэктеста лежат в репозитории
+!data/samples/
+!data/samples/*.csv
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

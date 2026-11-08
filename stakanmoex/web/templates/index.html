@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Стакан MOEX × Bybit</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+<style>
+:root{
+  --bg:#f5f6f8; --card:#ffffff; --line:#e2e5ea; --text:#1b1f27; --muted:#6b7380;
+  --up:#0f9d58; --down:#d93025; --accent:#2563eb; --accent-soft:#e8efff; --warn:#b45309; --warn-bg:#fff4e0;
+  --bid:#0f9d5822; --ask:#d9302522; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --bg:#0f1218; --card:#171b23; --line:#262c38; --text:#e6e9ef; --muted:#8c95a6;
+    --up:#34d399; --down:#f87171; --accent:#6ea0ff; --accent-soft:#1b2640; --warn:#fbbf24; --warn-bg:#2a2210;
+    --bid:#34d39926; --ask:#f8717126; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:14px 20px;border-bottom:1px solid var(--line);background:var(--card);position:sticky;top:0;z-index:5}
+h1{font-size:17px;margin:0;font-weight:650}
+.badge{font-size:11px;font-weight:700;letter-spacing:.04em;padding:3px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent)}
+.badge.demo{background:var(--warn-bg);color:var(--warn)}
+.spacer{flex:1}
+.muted{color:var(--muted)}
+select,input,button{font:inherit;color:var(--text);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+button{cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+button:disabled{opacity:.6;cursor:default}
+nav{display:flex;gap:4px;padding:10px 20px 0}
+nav button{border:none;background:none;padding:8px 14px;border-radius:8px 8px 0 0;color:var(--muted);font-weight:600}
+nav button.active{color:var(--text);background:var(--card);border:1px solid var(--line);border-bottom-color:var(--card)}
+main{padding:16px 20px 40px;max-width:1280px;margin:0 auto}
+.tab{display:none}.tab.active{display:block}
+.grid{display:grid;gap:12px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(210px,1fr));margin-bottom:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
+.big{font-size:26px;font-weight:700;font-family:var(--mono);letter-spacing:-.02em}
+.sub{font-size:12px;color:var(--muted);margin-top:2px}
+.up{color:var(--up)}.down{color:var(--down)}
+.banner{padding:10px 14px;border-radius:10px;margin-bottom:12px;background:var(--warn-bg);color:var(--warn);font-weight:500;display:none}
+.banner.show{display:block}
+.row2{grid-template-columns:1fr 1fr}
+@media(max-width:820px){.row2{grid-template-columns:1fr}}
+.toolbar{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+.toolbar .seg button{padding:4px 10px;border-radius:6px}
+.toolbar .seg button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.chart{position:relative;width:100%}
+.chart svg{display:block;width:100%;height:auto}
+.tip{position:absolute;pointer-events:none;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:12px;font-family:var(--mono);box-shadow:0 4px 14px #0003;display:none;white-space:nowrap}
+/* стакан */
+.book{font-family:var(--mono);font-size:12.5px}
+.book .hd,.book .r{display:grid;grid-template-columns:1.3fr 1fr 1fr;padding:2px 8px;position:relative}
+.book .hd{color:var(--muted);font-size:11px}
+.book .r .p,.book .r .q,.book .r .c{position:relative;z-index:1}
+.book .r .q,.book .r .c,.book .hd span:nth-child(n+2){text-align:right}
+.book .r .bar{position:absolute;top:1px;bottom:1px;right:0;z-index:0;border-radius:2px}
+.book .r.ask .bar{background:var(--ask)}.book .r.bid .bar{background:var(--bid)}
+.book .r.ask .p{color:var(--down)}.book .r.bid .p{color:var(--up)}
+.book .r.inc{box-shadow:inset 3px 0 0 var(--accent)}
+.book .mid{padding:5px 8px;border-block:1px solid var(--line);color:var(--muted);text-align:center;margin:3px 0}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
+td.n,th.n{text-align:right;font-family:var(--mono)}
+.tbl-wrap{overflow-x:auto}
+.pill{font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px}
+.pill.open{background:var(--accent-soft);color:var(--accent)}
+.pill.close{background:var(--bid);color:var(--up)}
+form.bt{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-items:end}
+form.bt label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+form.bt label.wide{grid-column:span 2}
+.err{color:var(--down);margin-top:10px;font-weight:500}
+footer{color:var(--muted);font-size:12px;text-align:center;padding:10px 20px 30px;max-width:900px;margin:0 auto}
+</style>
+</head>
+<body>
+<header>
+  <h1>📊 Стакан MOEX × Bybit</h1>
+  <span id="mode" class="badge">…</span>
+  <span class="spacer"></span>
+  <span class="muted" id="upd">нет данных</span>
+  <select id="pair" aria-label="Пара"></select>
+</header>
+<nav>
+  <button class="active" data-tab="monitor">Монитор</button>
+  <button data-tab="backtest">Бэктест</button>
+</nav>
+
+<main>
+<!-- ===================== МОНИТОР ===================== -->
+<section id="tab-monitor" class="tab active">
+  <div id="banner" class="banner"></div>
+  <div class="grid kpis">
+    <div class="card"><h3>Премия MOEX к Bybit</h3><div class="big" id="k-prem">—</div><div class="sub" id="k-prem-s"></div></div>
+    <div class="card"><h3>Чистая премия</h3><div class="big" id="k-net">—</div><div class="sub" id="k-net-s"></div></div>
+    <div class="card"><h3>Сигнал стратегии</h3><div class="big" id="k-pos" style="font-size:20px;line-height:1.5">—</div><div class="sub" id="k-pos-s"></div></div>
+    <div class="card"><h3>Исполнимый спред</h3>
+      <div class="sub">купить MOEX → продать Bybit</div><div class="big" style="font-size:18px" id="k-ea">—</div>
+      <div class="sub" style="margin-top:6px">купить Bybit → продать MOEX</div><div class="big" style="font-size:18px" id="k-eb">—</div></div>
+    <div class="card"><h3>Цены, USD/BTC</h3>
+      <div class="sub">MOEX (mid)</div><div class="big" style="font-size:18px" id="k-pm">—</div>
+      <div class="sub" style="margin-top:6px">Bybit (mid)</div><div class="big" style="font-size:18px" id="k-pb">—</div></div>
+  </div>
+
+  <div class="card" style="margin-bottom:12px">
+    <div class="toolbar">
+      <h3 style="margin:0;flex:1">Премия во времени, %</h3>
+      <span class="seg" id="range">
+        <button data-m="15">15м</button><button data-m="60" class="active">1ч</button>
+        <button data-m="360">6ч</button><button data-m="1440">24ч</button>
+      </span>
+      <a id="export" href="#" style="font-size:12px;color:var(--accent)">CSV</a>
+    </div>
+    <div class="chart" id="ch-live"><div class="tip"></div></div>
+  </div>
+
+  <div class="grid row2" style="margin-bottom:12px">
+    <div class="card"><h3>Стакан MOEX <span class="muted" style="text-transform:none">· в USD/BTC</span></h3><div class="book" id="book-moex"></div></div>
+    <div class="card"><h3>Стакан Bybit</h3><div class="book" id="book-bybit"></div></div>
+  </div>
+  <div class="muted" style="font-size:12px;margin:-4px 0 12px 4px">Синяя полоса слева — уровни, которые входят в расчёт цены на заданный объём.</div>
+
+  <div class="card">
+    <h3>События стратегии</h3>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Время</th><th>Пара</th><th>Событие</th><th>Направление</th><th class="n">Чистая премия</th><th>Примечание</th></tr></thead>
+      <tbody id="events"><tr><td colspan="6" class="muted">Событий пока нет</td></tr></tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- ===================== БЭКТЕСТ ===================== -->
+<section id="tab-backtest" class="tab">
+  <div class="card" style="margin-bottom:12px">
+    <form class="bt" id="bt-form">
+      <label class="wide">Набор данных
+        <select name="dataset" id="bt-dataset"></select></label>
+      <label>…или свой CSV
+        <input type="file" name="file" accept=".csv"></label>
+      <label>Дата старта пары (для порогов)
+        <input type="date" name="start_date"></label>
+      <label>Порог открытия, %
+        <input type="number" step="any" min="0" name="open_pct" placeholder="по расписанию"></label>
+      <label>Порог закрытия, %
+        <input type="number" step="any" min="0" name="close_pct" placeholder="по расписанию"></label>
+      <label>Капитал, USD
+        <input type="number" step="any" min="1" name="capital" value="100000"></label>
+      <label>Комиссии, % (2 ноги)
+        <input type="number" step="any" min="0" name="fee_pct" id="bt-fee"></label>
+      <label>Выбросы выше, %
+        <input type="number" step="any" min="0" name="outlier_pct" placeholder="не фильтровать"></label>
+      <button class="primary" type="submit" id="bt-run">Запустить</button>
+    </form>
+    <div class="muted" style="margin-top:10px;font-size:12px">CSV: столбцы <code>time</code>, <code>price_moex</code> (уже в USD/BTC), <code>price_bybit</code>. Если пороги пусты — используется расписание из настроек: <span id="bt-stages"></span></div>
+    <div class="err" id="bt-err"></div>
+  </div>
+
+  <div id="bt-out" style="display:none">
+    <div class="grid kpis" id="bt-stats"></div>
+    <div class="grid row2" style="margin-bottom:12px">
+      <div class="card"><h3>Капитал, USD</h3><div class="chart" id="ch-eq"><div class="tip"></div></div></div>
+      <div class="card"><h3>Чистая премия, % и сделки</h3><div class="chart" id="ch-net"><div class="tip"></div></div></div>
+    </div>
+    <div class="card"><h3>Сделки</h3><div class="tbl-wrap"><table>
+      <thead><tr><th>Открыта</th><th>Закрыта</th><th>Направление</th><th class="n">Премия откр.</th><th class="n">Премия закр.</th><th class="n">Результат, %</th><th class="n">PnL, USD</th><th class="n">Капитал</th></tr></thead>
+      <tbody id="bt-trades"></tbody></table></div></div>
+  </div>
+</section>
+</main>
+
+<footer>
+  Учебный проект. Не является инвестиционной рекомендацией. Бэктест использует цены закрытия свечей и не учитывает
+  проскальзывание, ликвидность, гарантийное обеспечение и риск разъезда цен до экспирации — реальный результат будет хуже.
+  Версия {{ version }}.
+</footer>
+
+{% raw %}
+<script>
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+let cfg = null, state = null, pairId = null, rangeMin = 60, lastHistory = 0;
+
+const DIR = {short_moex_long_bybit: 'SHORT MOEX / LONG Bybit', long_moex_short_bybit: 'LONG MOEX / SHORT Bybit'};
+const nf = (d) => new Intl.NumberFormat('ru-RU', {minimumFractionDigits: d, maximumFractionDigits: d});
+const fmt = (x, d=2) => (x == null || isNaN(x)) ? '—' : nf(d).format(x);
+const pct = (x, d=2) => (x == null || isNaN(x)) ? '—' : (x > 0 ? '+' : '') + nf(d).format(x) + '%';
+const sign = (x) => x > 0 ? 'up' : (x < 0 ? 'down' : '');
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const tfmt = (ts, tz) => new Date(ts * 1000).toLocaleString('ru-RU', {timeZone: tz, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit'});
+
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  let data = null;
+  try { data = await r.json(); } catch (e) {}
+  if (!r.ok) throw new Error((data && data.error) || `HTTP ${r.status}`);
+  return data;
+}
+
+/* ---------- универсальный SVG-график ---------- */
+function lineChart(host, o) {
+  $$('svg, .empty', host).forEach(n => n.remove());
+  const tip = $('.tip', host);
+  const W = Math.max(300, host.clientWidth), H = o.height || 260, m = {l: 58, r: 12, t: 10, b: 26};
+  const all = o.series.flatMap(s => s.pts);
+  if (!all.length) { host.insertAdjacentHTML('afterbegin', '<div class="empty muted" style="padding:40px 0;text-align:center">Данных пока нет — подождите несколько секунд</div>'); return; }
+  let x0 = Math.min(...all.map(p => p[0])), x1 = Math.max(...all.map(p => p[0]));
+  let ys = all.map(p => p[1]).concat((o.hlines || []).map(h => h.y));
+  let y0 = Math.min(...ys), y1 = Math.max(...ys);
+  if (x1 === x0) x1 = x0 + 1;
+  if (y1 === y0) { y0 -= 1; y1 += 1; }
+  const pad = (y1 - y0) * .06; y0 -= pad; y1 += pad;
+  const X = x => m.l + (x - x0) / (x1 - x0) * (W - m.l - m.r);
+  const Y = y => H - m.b - (y - y0) / (y1 - y0) * (H - m.t - m.b);
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  let g = '';
+  for (let i = 0; i <= 4; i++) {
+    const v = y0 + (y1 - y0) * i / 4, y = Y(v);
+    g += `<line x1="${m.l}" x2="${W - m.r}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${m.l - 6}" y="${y + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${(o.yFmt || (v => fmt(v, 2)))(v)}</text>`;
+  }
+  const span = x1 - x0;
+  for (let i = 0; i <= 4; i++) {
+    const v = x0 + span * i / 4;
+    const label = new Date(v * 1000).toLocaleString('ru-RU', span < 3600
+      ? {timeZone: o.tz, hour: '2-digit', minute: '2-digit', second: '2-digit'}
+      : span < 86400 * 2 ? {timeZone: o.tz, hour: '2-digit', minute: '2-digit'}
+      : {timeZone: o.tz, day: '2-digit', month: '2-digit'});
+    g += `<text x="${X(v)}" y="${H - 8}" text-anchor="${i === 0 ? 'start' : i === 4 ? 'end' : 'middle'}" font-size="11" fill="var(--muted)">${label}</text>`;
+  }
+  (o.hlines || []).forEach(h => {
+    g += `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(h.y)}" y2="${Y(h.y)}" stroke="${h.color}" stroke-dasharray="5 4"/><text x="${W - m.r - 2}" y="${Y(h.y) - 4}" text-anchor="end" font-size="11" fill="${h.color}">${h.label}</text>`;
+  });
+  o.series.forEach(s => {
+    if (!s.pts.length) return;
+    const d = s.pts.map((p, i) => (i ? 'L' : 'M') + X(p[0]).toFixed(1) + ' ' + Y(p[1]).toFixed(1)).join('');
+    g += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="1.8" stroke-linejoin="round"/>`;
+  });
+  (o.markers || []).forEach(k => {
+    if (k.x < x0 || k.x > x1) return;
+    const cx = X(k.x), cy = Y(k.y);
+    g += k.shape === 'up'
+      ? `<path d="M${cx} ${cy - 7}l5 9h-10z" fill="${k.color}"><title>${esc(k.title)}</title></path>`
+      : `<path d="M${cx} ${cy + 7}l5 -9h-10z" fill="${k.color}"><title>${esc(k.title)}</title></path>`;
+  });
+  g += `<line class="cross" y1="${m.t}" y2="${H - m.b}" stroke="var(--muted)" style="display:none"/>`;
+  svg.innerHTML = g;
+  host.insertBefore(svg, tip);
+
+  const cross = $('.cross', svg), first = o.series[0].pts;
+  svg.onmousemove = (e) => {
+    const r = svg.getBoundingClientRect(), px = (e.clientX - r.left) / r.width * W;
+    const xv = x0 + (px - m.l) / (W - m.l - m.r) * (x1 - x0);
+    let lo = 0, hi = first.length - 1;
+    while (lo < hi) { const mid = (lo + hi) >> 1; first[mid][0] < xv ? lo = mid + 1 : hi = mid; }
+    const i = (lo > 0 && Math.abs(first[lo - 1][0] - xv) < Math.abs(first[lo][0] - xv)) ? lo - 1 : lo;
+    const cx = X(first[i][0]);
+    cross.setAttribute('x1', cx); cross.setAttribute('x2', cx); cross.style.display = '';
+    tip.innerHTML = `${tfmt(first[i][0], o.tz)}<br>` + o.series.map(s => {
+      const p = s.pts.reduce((a, b) => Math.abs(b[0] - first[i][0]) < Math.abs(a[0] - first[i][0]) ? b : a, s.pts[0]);
+      return `<span style="color:${s.color}">●</span> ${s.name}: ${(o.tipFmt || o.yFmt || (v => fmt(v, 3)))(p[1])}`;
+    }).join('<br>');
+    tip.style.display = 'block';
+    const left = cx / W * r.width;
+    tip.style.left = Math.min(left + 12, r.width - tip.offsetWidth - 4) + 'px';
+    tip.style.top = '8px';
+  };
+  svg.onmouseleave = () => { cross.style.display = 'none'; tip.style.display = 'none'; };
+}
+
+/* ---------- стакан ---------- */
+function renderBook(host, book, size) {
+  if (!book) { host.innerHTML = '<div class="muted">Нет данных</div>'; return; }
+  const N = 10;
+  const side = (levels) => { let c = 0; return levels.slice(0, N).map(([p, q]) => { const prev = c; c += q; return {p, q, c, inc: prev < size}; }); };
+  const asks = side(book.asks), bids = side(book.bids);
+  const maxC = Math.max(asks.at(-1)?.c || 0, bids.at(-1)?.c || 0) || 1;
+  const row = (r, cls) => `<div class="r ${cls}${r.inc ? ' inc' : ''}"><span class="bar" style="width:${(r.c / maxC * 100).toFixed(1)}%"></span><span class="p">${fmt(r.p, 1)}</span><span class="q">${fmt(r.q, 3)}</span><span class="c">${fmt(r.c, 3)}</span></div>`;
+  const ba = asks[0]?.p, bb = bids[0]?.p;
+  const spread = (ba && bb) ? `спред ${fmt(ba - bb, 1)} · ${fmt((ba - bb) / bb * 100, 3)}%` : '';
+  host.innerHTML = `<div class="hd"><span>Цена</span><span>BTC</span><span>Σ BTC</span></div>`
+    + asks.slice().reverse().map(r => row(r, 'ask')).join('')
+    + `<div class="mid">${spread}</div>` + bids.map(r => row(r, 'bid')).join('');
+}
+
+/* ---------- монитор ---------- */
+function curPair() { return state && state.pairs.find(p => p.id === pairId); }
+
+function renderState() {
+  if (!state) return;
+  const p = curPair(); if (!p) return;
+  const m = p.metrics;
+  $('#upd').textContent = p.updated ? 'обновлено ' + new Date(p.updated * 1000).toLocaleTimeString('ru-RU') : 'нет данных';
+  const warn = [];
+  if (p.error) warn.push('Ошибка источника данных: ' + p.error);
+  if (m && !m.depth_ok) warn.push(`В стакане не хватает глубины на ${p.size_btc} BTC — цены считаются по доступному объёму.`);
+  const b = $('#banner'); b.textContent = warn.join(' '); b.classList.toggle('show', warn.length > 0);
+  if (!m) return;
+
+  $('#k-prem').textContent = pct(m.premium_pct, 3); $('#k-prem').className = 'big ' + (m.premium_pct > 0 ? 'up' : 'down');
+  $('#k-prem-s').textContent = (m.premium_pct >= 0 ? 'MOEX дороже Bybit' : 'MOEX дешевле Bybit') + ` · bid ${pct(m.bid_basis_pct, 2)} · ask ${pct(m.ask_basis_pct, 2)}`;
+  $('#k-net').textContent = fmt(m.net_pct, 3) + '%';
+  $('#k-net-s').textContent = `открыть > ${p.thresholds.open}% · закрыть < ${p.thresholds.close}% (комиссии ${fmt(state.fee_pct, 3)}%)`;
+  const pos = p.position;
+  $('#k-pos').innerHTML = pos.in_position ? `<span class="up">В ПОЗИЦИИ</span><br>${DIR[pos.direction]}` : '<span class="muted">Вне рынка</span>';
+  $('#k-pos-s').textContent = pos.in_position ? `открыто ${tfmt(pos.opened_at)} при ${fmt(pos.open_net_pct, 2)}%` : `ждём чистую премию > ${p.thresholds.open}%`;
+  $('#k-ea').textContent = pct(m.edge_buy_moex_sell_bybit_pct, 3); $('#k-ea').className = 'big ' + sign(m.edge_buy_moex_sell_bybit_pct);
+  $('#k-eb').textContent = pct(m.edge_buy_bybit_sell_moex_pct, 3); $('#k-eb').className = 'big ' + sign(m.edge_buy_bybit_sell_moex_pct);
+  $('#k-pm').textContent = fmt(m.moex_mid, 1); $('#k-pb').textContent = fmt(m.bybit_mid, 1);
+  renderBook($('#book-moex'), p.books.moex, p.size_btc);
+  renderBook($('#book-bybit'), p.books.bybit, p.size_btc);
+}
+
+async function loadHistory() {
+  if (!pairId) return;
+  const d = await api(`/api/history/${pairId}?minutes=${rangeMin}`);
+  const p = curPair(), th = p ? p.thresholds : null;
+  lineChart($('#ch-live'), {
+    series: [{name: 'Премия', color: 'var(--accent)', pts: d.points.map(x => [x.ts, x.premium_pct])},
+             {name: 'Чистая', color: 'var(--up)', pts: d.points.map(x => [x.ts, x.net_pct])}],
+    hlines: th ? [{y: th.open, label: 'открытие ' + th.open + '%', color: 'var(--down)'}, {y: th.close, label: 'закрытие ' + th.close + '%', color: 'var(--warn)'}] : [],
+    yFmt: v => fmt(v, 2) + '%', tipFmt: v => fmt(v, 3) + '%',
+  });
+  lastHistory = Date.now();
+}
+
+async function loadEvents() {
+  const d = await api('/api/events');
+  const names = Object.fromEntries((cfg.pairs || []).map(p => [p.id, p.name]));
+  $('#events').innerHTML = d.events.length ? d.events.map(e => `<tr>
+    <td>${tfmt(e.ts)}</td><td>${esc(names[e.pair_id] || e.pair_id)}</td>
+    <td><span class="pill ${e.type}">${e.type === 'open' ? 'ОТКРЫТЬ' : 'ЗАКРЫТЬ'}</span></td>
+    <td>${DIR[e.direction] || ''}</td><td class="n">${fmt(e.net_pct, 2)}%</td><td class="muted">${esc(e.note)}</td></tr>`).join('')
+    : '<tr><td colspan="6" class="muted">Событий пока нет</td></tr>';
+}
+
+async function poll() {
+  try {
+    state = await api('/api/state');
+    renderState();
+    if (Date.now() - lastHistory > 5000) { await loadHistory(); await loadEvents(); }
+  } catch (e) {
+    const b = $('#banner'); b.textContent = 'Нет связи с сервером: ' + e.message; b.classList.add('show');
+  }
+  setTimeout(poll, Math.max(1000, (state?.poll_interval || 2) * 1000));
+}
+
+/* ---------- бэктест ---------- */
+const stat = (label, val, cls='') => `<div class="card"><h3>${label}</h3><div class="big ${cls}" style="font-size:22px">${val}</div></div>`;
+
+$('#bt-form').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const btn = $('#bt-run'), err = $('#bt-err'); err.textContent = ''; btn.disabled = true; btn.textContent = 'Считаю…';
+  try {
+    const fd = new FormData(ev.target);
+    if (!fd.get('file') || !fd.get('file').name) fd.delete('file');
+    const r = await api('/api/backtest', {method: 'POST', body: fd});
+    renderBacktest(r);
+  } catch (e) { err.textContent = e.message; }
+  btn.disabled = false; btn.textContent = 'Запустить';
+});
+
+function renderBacktest(r) {
+  const s = r.stats; $('#bt-out').style.display = '';
+  $('#bt-stats').innerHTML = [
+    stat('Доходность', pct(s.return_pct, 2), sign(s.return_pct)),
+    stat('PnL, USD', fmt(s.pnl, 0), sign(s.pnl)),
+    stat('Сделок', `${s.trades} <span class="muted" style="font-size:13px">· побед ${fmt(s.win_rate_pct, 0)}%</span>`),
+    stat('Макс. просадка', fmt(s.max_drawdown_pct, 2) + '%', 'down'),
+    stat('Средняя сделка', pct(s.avg_trade_pct, 2)),
+    stat('Среднее удержание', fmt(s.avg_hold_hours / 24, 1) + ' дн.'),
+    stat('Период', `<span style="font-size:14px">${s.from.slice(0, 10)} → ${s.to.slice(0, 10)}</span><div class="sub">${s.rows} точек${s.skipped_outliers ? ` · выбросов отброшено: ${s.skipped_outliers}` : ''}</div>`),
+    stat('Открыта на конец', r.open_at_end ? `<span style="font-size:15px">${DIR[r.open_at_end.direction]}</span>` : 'нет'),
+  ].join('');
+  lineChart($('#ch-eq'), {tz: 'UTC', series: [{name: 'Капитал', color: 'var(--accent)', pts: r.equity}], yFmt: v => fmt(v, 0), tipFmt: v => fmt(v, 0)});
+  const markers = r.trades.flatMap(t => [
+    {x: t.open_ts, y: t.open_net_pct, color: 'var(--accent)', shape: 'up', title: 'Открытие ' + fmt(t.open_net_pct, 2) + '%'},
+    {x: t.close_ts, y: t.close_net_pct, color: 'var(--up)', shape: 'down', title: 'Закрытие ' + fmt(t.close_net_pct, 2) + '%'}]);
+  const constant = r.thresholds.length === 1;
+  lineChart($('#ch-net'), {tz: 'UTC', series: [{name: 'Чистая премия', color: 'var(--muted)', pts: r.net_series}], markers,
+    hlines: constant ? [{y: r.thresholds[0].open_pct, label: 'открытие', color: 'var(--down)'}, {y: r.thresholds[0].close_pct, label: 'закрытие', color: 'var(--warn)'}] : [],
+    yFmt: v => fmt(v, 1) + '%', tipFmt: v => fmt(v, 3) + '%'});
+  $('#bt-trades').innerHTML = r.trades.length ? r.trades.map(t => `<tr>
+    <td>${tfmt(t.open_ts, 'UTC')}</td><td>${tfmt(t.close_ts, 'UTC')}</td><td>${DIR[t.direction]}</td>
+    <td class="n">${fmt(t.open_net_pct, 2)}%</td><td class="n">${fmt(t.close_net_pct, 2)}%</td>
+    <td class="n ${sign(t.pnl_pct)}">${pct(t.pnl_pct, 2)}</td><td class="n ${sign(t.pnl)}">${fmt(t.pnl, 0)}</td><td class="n">${fmt(t.equity_after, 0)}</td></tr>`).join('')
+    : '<tr><td colspan="8" class="muted">Сделок не было — попробуйте снизить пороги</td></tr>';
+}
+
+/* ---------- init ---------- */
+async function init() {
+  cfg = await api('/api/config');
+  const mode = $('#mode'); mode.textContent = cfg.mode.toUpperCase(); mode.classList.toggle('demo', cfg.mode === 'demo');
+  mode.title = cfg.mode === 'demo' ? 'Синтетические данные. Для живых стаканов задайте MOEX_TOKEN.' : 'Реальные стаканы MOEX и Bybit';
+  $('#pair').innerHTML = cfg.pairs.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
+  pairId = cfg.pairs[0]?.id;
+  $('#pair').onchange = (e) => { pairId = e.target.value; renderState(); loadHistory(); };
+  $('#export').onclick = (e) => { e.currentTarget.href = `/api/export/${pairId}.csv`; };
+  $$('#range button').forEach(b => b.onclick = () => { $$('#range button').forEach(x => x.classList.remove('active')); b.classList.add('active'); rangeMin = +b.dataset.m; loadHistory(); });
+  $('#bt-dataset').innerHTML = cfg.datasets.map(d => `<option value="${esc(d.id)}" data-start="${esc(d.start_date)}">${esc(d.title)}</option>`).join('');
+  const setStart = () => { const o = $('#bt-dataset').selectedOptions[0]; $('#bt-form [name=start_date]').value = o ? o.dataset.start : ''; };
+  $('#bt-dataset').onchange = setStart; setStart();
+  $('#bt-fee').value = (+cfg.fee_pct.toFixed(4));
+  $('#bt-stages').textContent = cfg.stages.map(s => `с ${s.from_days}-го дня: ${s.open_pct}% / ${s.close_pct}%`).join('; ');
+  $$('nav button').forEach(b => b.onclick = () => {
+    $$('nav button').forEach(x => x.classList.toggle('active', x === b));
+    $$('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + b.dataset.tab));
+    if (b.dataset.tab === 'monitor') loadHistory();
+  });
+  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => loadHistory().catch(() => {}), 250); });
+  poll();
+}
+init().catch(e => { document.body.insertAdjacentHTML('afterbegin', '<div class="banner show">Не удалось загрузить настройки: ' + esc(e.message) + '</div>'); });
+</script>
+{% endraw %}
+</body>
+</html>

@@ -1,0 +1,16 @@
+services:
+  stakanmoex:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DB_PATH: /app/storage/stakanmoex.db
+    volumes:
+      - stakanmoex-data:/app/storage
+    restart: unless-stopped
+
+volumes:
+  stakanmoex-data:

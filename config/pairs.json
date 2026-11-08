@@ -1,0 +1,24 @@
+[
+  {
+    "id": "ibh6",
+    "name": "IBH6 ↔ BTCUSDT-27MAR26",
+    "moex_ticker": "IBH6",
+    "bybit_symbol": "BTCUSDT-27MAR26",
+    "bybit_category": "inverse",
+    "moex_multiplier": 1761.2445,
+    "moex_lots_per_btc": 1750,
+    "size_btc": 1.0,
+    "start_date": "2025-11-18"
+  },
+  {
+    "id": "btf6",
+    "name": "BTF6 ↔ BTCUSDT-27MAR26",
+    "moex_ticker": "BTF6",
+    "bybit_symbol": "BTCUSDT-27MAR26",
+    "bybit_category": "inverse",
+    "moex_multiplier": 1.0,
+    "moex_lots_per_btc": 1,
+    "size_btc": 1.0,
+    "start_date": "2025-11-18"
+  }
+]
